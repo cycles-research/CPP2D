@@ -9,6 +9,9 @@
 #pragma warning(disable: 4548)
 #include <llvm/Support/Path.h>
 #include <clang/AST/ASTContext.h>
+#include <clang/AST/Stmt.h>
+#include <clang/Basic/FileEntry.h>
+#include <clang/Basic/SourceManager.h>
 #pragma warning(pop)
 
 using namespace llvm;
@@ -33,7 +36,7 @@ const char* getFile(clang::SourceManager const& sourceManager, clang::SourceLoca
 
 const char* getFile(clang::SourceManager const& sourceManager, Stmt const* d)
 {
-	return getFile(sourceManager, d->getLocStart());
+	return getFile(sourceManager, d->getBeginLoc());
 }
 
 const char* getFile(clang::SourceManager const& sourceManager, Decl const* d)

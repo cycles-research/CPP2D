@@ -14,6 +14,9 @@
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
 #include <clang/AST/ASTContext.h>
+#include <clang/Basic/SourceManager.h>
+#include <clang/AST/Stmt.h>
+#include <clang/Basic/FileEntry.h>
 #pragma warning(pop)
 
 #include <sstream>
@@ -85,7 +88,7 @@ void CPP2DPPHandling::InclusionDirective(
   const clang::Module*			//imported
 )
 {
-	includes_in_file.insert(file_name);
+	includes_in_file.insert(std::string(file_name));
 }
 
 //! Print arguments of the macro MI into a std::stringstream, for a normal macro declaration
@@ -168,7 +171,7 @@ std::string make_d_macro(MacroInfo const* MI, std::string const& name)
 {
 	std::set<std::string> arg_names;
 	for(IdentifierInfo const* arg : MI->params())
-		arg_names.insert(arg->getName());
+		arg_names.insert(std::string(arg->getName()));
 
 	std::stringstream d_templ;
 	d_templ << "template " + name;
@@ -206,7 +209,7 @@ std::string make_d_macro(MacroInfo const* MI, std::string const& name)
 		else if(auto* II = Tok.getIdentifierInfo())
 		{
 			std::string const identifierName =
-			  CPP2DTools::replaceString(II->getName(), "\"", "\\\"");
+			  CPP2DTools::replaceString(std::string(II->getName()), "\"", "\\\"");
 			if(arg_names.count(identifierName))
 			{
 				if(next_is_str)
@@ -256,10 +259,11 @@ void CPP2DPPHandling::inject_macro(
 	FileID fileID = pp.getSourceManager().createFileID(
 	                  std::move(membuf), clang::SrcMgr::C_User, 0, 0, MD->getLocation());
 
-	pp.EnterSourceFile(fileID, pp.GetCurDirLookup(), MD->getMacroInfo()->getDefinitionEndLoc());
+	pp.EnterSourceFile(fileID, nullptr, MD->getMacroInfo()->getDefinitionEndLoc());
+	//pp.EnterSourceFile(fileID, pp.CurDirLookup(), MD->getMacroInfo()->getDefinitionEndLoc());
 
 	char const* filename = CPP2DTools::getFile(sourceManager, MD->getLocation());
-	if(CPP2DTools::checkFilename(modulename, filename))
+	if(CPP2DTools::checkFilename(std::string(modulename), filename))
 		add_before_decl.insert(make_d_macro(MD->getMacroInfo(), name));
 }
 
@@ -331,7 +335,7 @@ void CPP2DPPHandling::TransformMacroStmt(
 
 void CPP2DPPHandling::MacroDefined(const Token& MacroNameTok, const MacroDirective* MD)
 {
-	std::string const& name = MacroNameTok.getIdentifierInfo()->getName();
+	std::string const& name = std::string(MacroNameTok.getIdentifierInfo()->getName());
 	clang::MacroInfo const* MI = MD->getMacroInfo();
 	if(MI->isBuiltinMacro())
 		return;

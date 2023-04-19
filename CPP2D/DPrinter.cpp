@@ -542,7 +542,8 @@ void DPrinter::printMacroArgs(CallExpr* macro_args)
 		out() << "q{";
 		if(auto* matTmpExpr = dyn_cast<MaterializeTemporaryExpr>(arg))
 		{
-			Stmt* tmpExpr = matTmpExpr->getTemporary();
+			//Stmt* tmpExpr = matTmpExpr->getTemporaryExpr();
+			Stmt* tmpExpr = matTmpExpr->getSubExpr();
 			if(auto* callExpr = dyn_cast<CallExpr>(tmpExpr))
 			{
 				if(auto* impCast = dyn_cast<ImplicitCastExpr>(callExpr->getCallee()))
@@ -666,7 +667,7 @@ bool DPrinter::TraverseTranslationUnitDecl(TranslationUnitDecl* Decl)
 	llvm::raw_fd_ostream file(StringRef(modulename + ".print.cpp"), ec, sys::fs::OpenFlags());
 	Decl->print(file);
 
-	SourceLocation locStart = Decl->getLocStart();
+	SourceLocation locStart = Decl->getBeginLoc();
 
 	std::ofstream file2(modulename + ".source.cpp");
 	auto& sm = Context->getSourceManager();
@@ -940,8 +941,8 @@ void DPrinter::traverseCompoundStmtImpl(CompoundStmt* Stmt, InitList initList, A
 	for(auto child : Stmt->children())
 	{
 		printStmtComment(locStart,
-		                 child->getLocStart(),
-		                 child->getLocEnd(),
+		                 child->getBeginLoc(),
+		                 child->getEndLoc(),
 		                 true
 		);
 		out() << indentStr();
@@ -1401,7 +1402,10 @@ void DPrinter::printTemplateArgument(TemplateArgument const& ta)
 	{
 	case TemplateArgument::Null: break;
 	case TemplateArgument::Declaration: TraverseDecl(ta.getAsDecl()); break;
-	case TemplateArgument::Integral: out() << ta.getAsIntegral().toString(10); break;
+	case TemplateArgument::Integral: {
+			llvm::SmallString<1000> str;
+			ta.getAsIntegral().toString(str,10);
+			out() << std::string(str); } break;
 	case TemplateArgument::NullPtr: out() << "null"; break;
 	case TemplateArgument::Type: printType(ta.getAsType()); break;
 	case TemplateArgument::Pack:
@@ -1551,7 +1555,7 @@ bool DPrinter::TraverseCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr*  E
 	printType(Expr->getTypeAsWritten());
 	Spliter spliter(*this, ", ");
 	out() << "(";
-	for(decltype(Expr->arg_size()) i = 0; i < Expr->arg_size(); ++i)
+	for(decltype(Expr->getNumArgs()) i = 0; i < Expr->getNumArgs(); ++i)
 	{
 		auto arg = Expr->getArg(i);
 		if(arg->getStmtClass() != Stmt::StmtClass::CXXDefaultArgExprClass)
@@ -1681,7 +1685,7 @@ bool DPrinter::TraverseCXXNewExpr(CXXNewExpr* Expr)
 	{
 		printType(Expr->getAllocatedType());
 		out() << '[';
-		TraverseStmt(Expr->getArraySize());
+		TraverseStmt(Expr->getArraySize().value());
 		out() << ']';
 	}
 	else
@@ -1989,7 +1993,7 @@ bool DPrinter::printFuncBegin(FunctionDecl* Decl, std::string& tmpParams, int ar
 		};
 		if(auto* methodDecl = dyn_cast<CXXMethodDecl>(Decl))
 		{
-			arg1Type = methodDecl->getThisType(*Context);
+			arg1Type = methodDecl->getThisType(); // (*Context);
 			arg1Record = methodDecl->getParent();
 			if(methodDecl->getNumParams() > 0)
 			{
@@ -2137,7 +2141,7 @@ TypeOptions::Semantic getThisSemantic(Decl* decl, ASTContext& context)
 {
 	if(decl->isStatic())
 		return TypeOptions::Reference;
-	auto* recordPtrType = dyn_cast<clang::PointerType>(decl->getThisType(context));
+	auto* recordPtrType = dyn_cast<clang::PointerType>(decl->getThisType()); // (context));
 	return DPrinter::getSemantic(recordPtrType->getPointeeType());
 }
 
@@ -2254,22 +2258,22 @@ void DPrinter::traverseFunctionDeclImpl(
 		{
 			if (isMain && Decl->getNumParams() == 2 && decl == bodyDecl->parameters()[0])
 			{	// Remove the first parameter (argc) of the main function
-				locStart = decl->getLocEnd();
+				locStart = decl->getEndLoc();
 				++index;
 				continue;
 			}
 			if (arg_become_this == static_cast<int>(index))
 			{
 				isConstMethod = isConst(decl->getType());
-				locStart = decl->getLocEnd();
+				locStart = decl->getEndLoc();
 			}
 			else
 			{
-				SourceLocation endLoc = decl->getLocEnd();
+				SourceLocation endLoc = decl->getEndLoc();
 				if (numParam != 1)
 				{
 					bool isComment = printStmtComment(locStart,
-						decl->getLocStart(),
+						decl->getBeginLoc(),
 						endLoc);
 					if(not isComment)
 						out() << std::endl;
@@ -2633,7 +2637,9 @@ bool DPrinter::TraverseEnumType(EnumType* Type)
 bool DPrinter::TraverseIntegerLiteral(IntegerLiteral* Stmt)
 {
 	if(passStmt(Stmt)) return true;
-	out() << Stmt->getValue().toString(10, true);
+	llvm::SmallString<1000> str;
+	Stmt->getValue().toString(str,10, true);
+	out() << std::string(str);
 	return true;
 }
 
@@ -2834,7 +2840,7 @@ bool DPrinter::TraverseNonTypeTemplateParmDecl(NonTypeTemplateParmDecl* Decl)
 	out() << " ";
 	IdentifierInfo* identifier = Decl->getIdentifier();
 	if(identifier)
-		out() << mangleName(identifier->getName());
+		out() << mangleName(std::string(identifier->getName()));
 	return true;
 }
 
@@ -3125,7 +3131,9 @@ bool DPrinter::TraverseCXXThrowExpr(CXXThrowExpr* Stmt)
 bool DPrinter::TraverseMaterializeTemporaryExpr(MaterializeTemporaryExpr* Stmt)
 {
 	if(passStmt(Stmt)) return true;
-	TraverseStmt(Stmt->GetTemporaryExpr());
+	//TraverseStmt(Stmt->getOrCreateValue());
+	TraverseStmt(Stmt->getSubExpr());
+	//TraverseStmt(Stmt->GetTemporaryExpr());
 	return true;
 }
 
@@ -3386,7 +3394,7 @@ bool DPrinter::TraverseLambdaExpr(LambdaExpr* Node)
 
 	// Print the body.
 	out() << "\n" << indentStr();
-	CompoundStmt* Body = Node->getBody();
+	CompoundStmt* Body = dyn_cast<CompoundStmt>(Node->getBody());
 	TraverseStmt(Body);
 	if(hasAuto)
 		out() << ")()";
@@ -3969,9 +3977,12 @@ bool DPrinter::TraverseRecordType(RecordType* Type)
 
 bool DPrinter::TraverseConstantArrayType(ConstantArrayType* Type)
 {
+	llvm::SmallString<1000> str;
 	if(passType(Type)) return false;
 	printType(Type->getElementType());
-	out() << '[' << Type->getSize().toString(10, false) << ']';
+	Type->getSize().toString(str,10, false);
+	//out() << '[' << Type->getSize().toString(10, false) << ']';
+	out() << '[' << std::string(str) << ']';
 	return true;
 }
 

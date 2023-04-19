@@ -20,42 +20,45 @@ add_executable(
 )
 
 target_link_libraries(cpp2d
-  clangFrontend
-  clangSerialization
-  clangDriver
-  clangParse
-  clangSema
-  clangAnalysis
-  clangAST
-  clangBasic
-  clangEdit
-  clangLex
-  clangTooling
-  clangASTMatchers
+  clang
+  clang-cpp
+  #clangFrontend
+  #clangSerialization
+  #clangDriver
+  #clangParse
+  #clangSema
+  #clangAnalysis
+  #clangAST
+  #clangBasic
+  #clangEdit
+  #clangLex
+  #clangTooling
+  #clangASTMatchers
 )
 
 target_link_libraries(cpp2d
-  LLVMX86AsmParser # MC, MCParser, Support, X86Desc, X86Info
-  LLVMX86Desc # MC, Support, X86AsmPrinter, X86Info
-  LLVMX86AsmPrinter # MC, Support, X86Utils
-  LLVMX86Info # MC, Support, Target
-  LLVMX86Utils # Core, Support
-  LLVMipo
-  LLVMScalarOpts
-  LLVMInstCombine
-  LLVMTransformUtils
-  LLVMAnalysis
-  LLVMTarget
-  LLVMOption # Support
-  LLVMMCParser # MC, Support
-  LLVMMC # Object, Support
-  LLVMObject # BitReader, Core, Support
-  LLVMBitReader # Core, Support
-  LLVMCore # Support
-  LLVMProfileData
-  LLVMSupport
-  LLVMDemangle
-  LLVMBinaryFormat  # Needed under windows
+  LLVM-15
+  #LLVMX86AsmParser # MC, MCParser, Support, X86Desc, X86Info
+  #LLVMX86Desc # MC, Support, X86AsmPrinter, X86Info
+  #LLVMX86AsmPrinter # MC, Support, X86Utils
+  #LLVMX86Info # MC, Support, Target
+  #LLVMX86Utils # Core, Support
+  #LLVMipo
+  #LLVMScalarOpts
+  #LLVMInstCombine
+  #LLVMTransformUtils
+  #LLVMAnalysis
+  #LLVMTarget
+  #LLVMOption # Support
+  #LLVMMCParser # MC, Support
+  #LLVMMC # Object, Support
+  #LLVMObject # BitReader, Core, Support
+  #LLVMBitReader # Core, Support
+  #LLVMCore # Support
+  #LLVMProfileData
+  #LLVMSupport
+  #LLVMDemangle
+  #LLVMBinaryFormat  # Needed under windows
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX)

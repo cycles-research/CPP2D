@@ -112,7 +112,7 @@ void boost_port(MatchContainer& mc, MatchFinder& finder)
 			pr.stream() << "[].map!(";
 			if(auto* a = dyn_cast<MaterializeTemporaryExpr>(opCall->getArg(1)))
 			{
-				if(auto* b = dyn_cast<ImplicitCastExpr>(a->getTemporary()))
+				if(auto* b = dyn_cast<ImplicitCastExpr>(a->getSubExpr()))
 				{
 					if(auto* c = dyn_cast<CXXOperatorCallExpr>(b->getSubExpr()))
 					{

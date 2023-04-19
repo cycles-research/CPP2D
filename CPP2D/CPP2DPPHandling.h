@@ -37,7 +37,7 @@ public:
 	  llvm::StringRef,				//search_path,
 	  llvm::StringRef,				//relative_path,
 	  const clang::Module*			//imported
-	) override;
+	); // override;
 
 	//! Transform macro definition by calling TransformMacroExpr or TransformMacroStmt
 	void MacroDefined(const clang::Token& MacroNameTok, const clang::MacroDirective* MD) override;

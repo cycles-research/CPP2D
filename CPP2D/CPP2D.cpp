@@ -74,14 +74,17 @@ public:
 
 int main(int argc, char const** argv)
 {
+	char* Overview = NULL;
+	llvm::cl::NumOccurrencesFlag OccurrencesFlag;
 	std::vector<char const*> argv_vect;
 	std::copy(argv, argv + static_cast<intptr_t>(argc), std::back_inserter(argv_vect));
 	argv_vect.insert(std::begin(argv_vect) + 1, "-macro-expr=assert/e");
 	argc = static_cast<int>(argv_vect.size());
-	CommonOptionsParser OptionsParser(argc, argv_vect.data(), cpp2dCategory);
-	CPP2DCompilationDatabase compilationDatabase(OptionsParser.getCompilations());
+	//CommonOptionsParser OptionsParser(argc, argv_vect.data(), cpp2dCategory);
+	auto OptionsParser = CommonOptionsParser::create(argc, argv_vect.data(), cpp2dCategory); // ,OccurrencesFlag,Overview);
+	CPP2DCompilationDatabase compilationDatabase(OptionsParser->getCompilations());
 	ClangTool Tool(
 	  compilationDatabase,
-	  OptionsParser.getSourcePathList());
+	  OptionsParser->getSourcePathList());
 	return Tool.run(newFrontendActionFactory<CPP2DFrontendAction>().get());
 }
